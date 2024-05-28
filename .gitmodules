@@ -1,0 +1,6 @@
+[submodule "Source/ThirdParty/flatbuffers"]
+	path = Source/ThirdParty/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+[submodule "Source/ThirdParty/game-protocol-schemas"]
+	path = Source/ThirdParty/game-protocol-schemas
+	url = git@github.com:sanhok-engine/game-protocol-schemas.git

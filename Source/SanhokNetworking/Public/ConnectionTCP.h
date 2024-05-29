@@ -1,7 +1,6 @@
 #pragma once
 
 #include "flatbuffers/flatbuffers.h"
-#include "ConnectionController.h"
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
@@ -29,17 +28,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Stop();
 
-	UFUNCTION(BlueprintCallable)
-	void SetConnectionControllerComponent(UConnectionController* connection_controller)
-	{
-		connection_controller_ = connection_controller;
-	}
+	void set_on_receive(TFunction<void(TArray<uint8>&&, bool)>&& on_receive) { on_receive_ = on_receive; }
 
 private:
 	void Receive();
-
-	UPROPERTY()
-	UConnectionController* connection_controller_{nullptr};
+	TFunction<void(TArray<uint8>&&, bool)> on_receive_;
 
 	FSocket* socket_{nullptr};
 	TAtomic<bool> is_connected_{false};

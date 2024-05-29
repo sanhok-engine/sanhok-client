@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "flatbuffers/flatbuffers.h"
+#include "ConnectionTCP.h"
+#include "ConnectionUDP.h"
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
@@ -16,11 +18,19 @@ class SANHOKNETWORKING_API UConnectionController : public UActorComponent
 public:
 	UConnectionController();
 
+	virtual void BeginPlay() override;
+
 	void Deserialize(TArray<uint8>&& buffer, bool size_prefixed);
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	FOnClientJoin OnClientJoin;
 
 private:
-	uint32 client_id_ {0};
+	UPROPERTY()
+	UConnectionTCP* ConnectionTCP{nullptr};
+
+	// UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
+	// UConnectionUDP* connection_udp_{nullptr};
+
+	uint32 client_id_{0};
 };

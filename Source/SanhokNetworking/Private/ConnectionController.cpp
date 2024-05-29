@@ -4,6 +4,23 @@
 UConnectionController::UConnectionController()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	ConnectionTCP = CreateDefaultSubobject<UConnectionTCP>(TEXT("Connection TCP"));
+	// connection_tcp_->AttachTo(RootComponent);
+	ConnectionTCP->set_on_receive([this](TArray<uint8>&& buffer, bool size_prefixed)
+	{
+		Deserialize(MoveTemp(buffer), size_prefixed);
+	});
+}
+
+void UConnectionController::BeginPlay()
+{
+	if (!ConnectionTCP)
+	{
+		UE_LOG(LogNet, Error, TEXT("ConnectionTCP not set"));
+		return;
+	}
+	ConnectionTCP->Connect("127.0.0.1:50000");
 }
 
 void UConnectionController::Deserialize(TArray<uint8>&& buffer, const bool size_prefixed)
@@ -21,9 +38,10 @@ void UConnectionController::Deserialize(TArray<uint8>&& buffer, const bool size_
 		{
 			const auto client_join = protocol->protocol_as<ClientJoin>();
 
-			// OnClientJoin.Execute(client_join->client_id(), client_join->udp_port());
 			client_id_ = client_join->client_id();
-			UE_LOG(LogTemp, Display, TEXT("ClientJoin: %d, %d"), client_join->client_id(), client_join->udp_port());
+			UE_LOG(LogNet, Display, TEXT("ClientJoin: %d, %d"), client_join->client_id(), client_join->udp_port());
+
+			//TODO: Test open/close udp connection
 			break;
 		}
 

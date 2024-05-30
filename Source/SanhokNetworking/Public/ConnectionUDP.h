@@ -16,6 +16,9 @@ public:
 
 	void Open(const FIPv4Endpoint& local_endpoint = {FIPv4Address {0, 0, 0, 0}, 0}, int32 receive_buffer_size = 65536);
 	void Close();
+	void Connect(const FInternetAddr& remote_address);
+
+	bool GetLocalAddress(FInternetAddr& target_address);
 
 private:
 	FSocket* socket_{nullptr};

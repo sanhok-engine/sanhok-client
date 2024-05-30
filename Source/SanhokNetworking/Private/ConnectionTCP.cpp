@@ -1,8 +1,16 @@
 #include "ConnectionTCP.h"
+#include "SocketSubsystem.h"
 
 UConnectionTCP::UConnectionTCP()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+}
+
+void UConnectionTCP::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Stop();
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void UConnectionTCP::Connect(const FString& remote_endpoint)
@@ -40,6 +48,7 @@ void UConnectionTCP::Connect(const FString& remote_endpoint)
 void UConnectionTCP::Disconnect()
 {
 	if (!is_connected_.Exchange(false)) return;
+	if (!socket_) return;
 
 	if (!socket_->Shutdown(ESocketShutdownMode::ReadWrite))
 	{
@@ -57,12 +66,29 @@ void UConnectionTCP::Start()
 
 	AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this]
 	{
-		UE_LOG(LogNet, Display, TEXT("Receive thread running..."));
+		UE_LOG(LogNet, Display, TEXT("[%s] Receive thread running..."), *GetNameSafe(this));
 		while (is_running_)
 		{
 			Receive();
 		}
-		UE_LOG(LogNet, Display, TEXT("Receive thread exiting"));
+		UE_LOG(LogNet, Display, TEXT("[%s] Receive thread exiting"), *GetNameSafe(this));
+	});
+
+	AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this]
+	{
+		UE_LOG(LogNet, Display, TEXT("[%s] Send thread running..."), *GetNameSafe(this));
+		while (is_running_)
+		{
+			TSharedPtr<flatbuffers::DetachedBuffer> buffer;
+			if (!send_queue_.Dequeue(buffer)) continue;
+
+			if (int32 bytes_sent; !socket_->Send(buffer->data(), buffer->size(), bytes_sent))
+			{
+				UE_LOG(LogNet, Error, TEXT("[%s] Error sending"), *GetNameSafe(this));
+				Stop();
+			}
+		}
+		UE_LOG(LogNet, Display, TEXT("[%s] Send thread exiting"), *GetNameSafe(this));
 	});
 }
 
@@ -71,6 +97,20 @@ void UConnectionTCP::Stop()
 	if (!is_running_.Exchange(false)) return;
 
 	Disconnect();
+}
+
+void UConnectionTCP::Send(TSharedPtr<flatbuffers::DetachedBuffer> buffer)
+{
+	if (!send_queue_.Enqueue(buffer))
+	{
+		UE_LOG(LogNet, Error, TEXT("[%s] Error enqueuing sending buffer"), *GetNameSafe(this));
+	}
+}
+
+bool UConnectionTCP::GetRemoteAddress(FInternetAddr& target_address) const
+{
+	if (!socket_) return false;
+	return socket_->GetPeerAddress(target_address);
 }
 
 void UConnectionTCP::Receive()
